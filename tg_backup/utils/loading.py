@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Iterator
 from enum import Enum
+from typing import TypeVar, overload
 
 from adaptix import Retort, bound, loader
 from adaptix import Mediator, Loader
@@ -9,6 +10,7 @@ from adaptix._internal.morphing.request_cls import LoaderRequest
 from adaptix._internal.provider.located_request import for_predicate
 from adaptix._internal.provider.location import TypeHintLoc
 
+import pyrogram
 from pyrogram.enums.auto_name import AutoName
 from pyrogram.types import Object
 
@@ -52,7 +54,18 @@ _pyrogram_objects = Retort(recipe=[
 ])
 
 
-def load_object(raw: dict) -> Object:
+AnyObject = TypeVar("AnyObject", bound=Object, covariant=True)
+
+
+@overload
+def load_object(raw: dict, type: type[AnyObject]) -> AnyObject: ...
+@overload
+def load_object(raw: dict, type: None = None) -> Object: ...
+
+
+def load_object(raw: dict, type: type[AnyObject] | None = None) -> AnyObject | Object:
+    if type is not None:
+        return _pyrogram_objects.load(raw, type)
     return _pyrogram_objects.load(raw, Object)
 
 
