@@ -13,7 +13,7 @@ from datetime import datetime as dt
 from functools import cached_property
 from operator import attrgetter
 from pathlib import Path
-from typing import NamedTuple, ParamSpec, Protocol, TypeAlias, TypeVar, TypeVarTuple
+from typing import NamedTuple, ParamSpec, Protocol, TypeAlias, TypeVar, TypeVarTuple, cast
 
 from adaptix import Retort
 from json_stream import load, to_standard_types
@@ -202,11 +202,21 @@ class MediaFileInfo:
     file_name: str
     file_size: int | None
 
+    def __post_init__(self):
+        if isinstance(self.raw_file_id, FileId):
+            return
+
+        file_id = FileId.decode(self.raw_file_id)
+        if file_id is None:
+            raise ValueError(f"{self.raw_file_id!r} is not valid file id")
+
     @cached_property
     def file_id(self) -> FileId:
         if isinstance(self.raw_file_id, FileId):
             return self.raw_file_id
-        return FileId.decode(self.raw_file_id)
+
+        # checked in __post_init__
+        return cast(FileId, FileId.decode(self.raw_file_id))
 
     @property
     def file_type(self) -> FileType:
