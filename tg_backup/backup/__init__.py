@@ -297,7 +297,7 @@ def get_media_file_info(client: Client, media: TGMedia) -> MediaFileInfo | None:
 
     file_type = file_info.file_type
     file_name = getattr(media, "file_name", "")
-    file_size = getattr(media, "file_size", 0)
+    file_size = getattr(media, "file_size", None)
     mime_type = getattr(media, "mime_type", "")
     date = getattr(media, "date", None)
 
