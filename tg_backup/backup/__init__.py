@@ -17,7 +17,7 @@ from typing import NamedTuple, ParamSpec, Protocol, TypeAlias, TypeVar, TypeVarT
 
 from adaptix import Retort
 from json_stream import load, to_standard_types
-from pyrogram import Client
+from pyrogram.client import Client
 from pyrogram.file_id import FileId, FileType, PHOTO_TYPES
 from pyrogram.types.object import Object
 from pyrogram.types import Chat, Dialog
