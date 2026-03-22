@@ -281,10 +281,13 @@ def get_media(source: Message) -> TGMedia | None:
 
 
 def get_media_file_info(client: Client, media: TGMedia) -> MediaFileInfo | None:
-    for attrname in ('big_file_id', 'file_id'):
+    for attrname in ('big_file_id', 'file_id', 'small_file_id'):
         file_id = getattr(media, attrname, None)
         if file_id is not None:
             break
+    else:
+        log.warning("File id not found in %s", type(media).__name__)
+        return None
 
     if not isinstance(file_id, str):
         log.warning("Non-string file_id or big_file_id in %s", type(media).__name__)
