@@ -164,7 +164,7 @@ async def main(client: Client):
     chat: Chat
     messages_iter: AsyncIterator[Message] = client.get_chat_history(
         chat_id=chat.id,
-    )  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+    )
 
     by_hour: dict[str, dict[int | str, list[Message]]] = {}
     users: dict[int, User] = {}

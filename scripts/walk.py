@@ -159,7 +159,7 @@ async def get_chat_avatars(client: Client, chat_id: int) -> list[Photo] | None:
         try:
             avatars: list[Photo] | None = [
                 avatar async for avatar in
-                client.get_chat_photos(chat_id)  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+                client.get_chat_photos(chat_id)
             ]
         except UserIdInvalid:
             logger.warning("Failed to get chat avatars.")

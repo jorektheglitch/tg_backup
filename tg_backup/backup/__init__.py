@@ -337,7 +337,7 @@ async def process(iterator: AsyncIterator[T | None], descriprion: str) -> AsyncI
 async def get_chats_info(client: Client) -> list[Chat]:
     log.info("Start grabbbing chats info.")
 
-    dialogs_iter: AsyncIterator[Dialog] = client.get_dialogs()  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+    dialogs_iter: AsyncIterator[Dialog] = client.get_dialogs()
     dialogs: list[Dialog | None] = []
     async for counter, dialogs_batch in batch_asynciter(dialogs_iter):
         dialogs.extend(dialogs_batch)
@@ -363,7 +363,7 @@ async def get_chat_avatars(client: Client, chat_id: int) -> list[Photo] | None:
         try:
             avatars: list[Photo] | None = [
                 avatar async for avatar in
-                client.get_chat_photos(chat_id)  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+                client.get_chat_photos(chat_id)
             ]
         except UserIdInvalid:
             log.warning("Failed to get chat avatars.")
@@ -379,7 +379,7 @@ async def get_chat_messages(client: Client, chat_id: int, batch_size: int = 1000
     log.info("Start grabbbing messages of chat %s.", chat_id)
     messages_iter: AsyncIterator[Message] = client.get_chat_history(
         chat_id=chat_id
-    )  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+    )
     count = 0
     async for counter, messages_batch in batch_asynciter(messages_iter, batch_size=batch_size):
         clean_batch = [message for message in messages_batch if message is not None]

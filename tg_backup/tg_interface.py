@@ -31,7 +31,6 @@ class TG:
         self._logger.info("Start grabbbing chats.")
 
         dialogs_iter: AsyncIterator[Dialog] = self._client.get_dialogs()  # type: ignore
-        # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
         if self.track:
             dialogs_count = await self._client.get_dialogs_count()
             dialogs_iter = tqdm(dialogs_iter, desc="Fetching chats list", total=dialogs_count, unit="ob")
@@ -63,7 +62,7 @@ class TG:
             try:
                 avatars = [
                     avatar async for avatar in
-                    self._client.get_chat_photos(chat.id)  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+                    self._client.get_chat_photos(chat.id)  # type: ignore
                 ]
             except UserIdInvalid:
                 self._logger.warning("Failed to get chat avatars (UserIdInvalid).")
@@ -82,7 +81,7 @@ class TG:
         chat_name = get_log_phrase(chat)
         messages_iter: AsyncIterator[Message] = self._client.get_chat_history(
             chat_id=chat.id, reverse=True,
-        )  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+        )
         if self.track:
             self._logger.info(f"Get messages count for {chat_name}")
             messages_count = await self._client.get_chat_history_count(chat.id)
@@ -113,7 +112,7 @@ class TG:
         chat_name = get_log_phrase(chat)
         messages_iter: AsyncIterator[Message] = self._client.get_chat_history(
             chat_id=chat.id, reverse=True,
-        )  # type: ignore  # FUCK TYPEHINTS IN PYROGRAM'S METHODS!
+        )
         if self.track:
             self._logger.info(f"Get messages count for {chat_name}")
             messages_count = await self._client.get_chat_history_count(chat.id)
