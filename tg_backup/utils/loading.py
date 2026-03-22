@@ -1,78 +1,6 @@
-from collections.abc import Iterable, Iterator
-from enum import Enum
-from typing import TypeVar, overload
+from typing import Any
 
-from adaptix import Retort, bound, loader
-from adaptix import Mediator, Loader
-from adaptix.type_tools import exec_type_checking
-from adaptix._internal.provider.loc_stack_filtering import OriginSubclassLSC
-from adaptix._internal.morphing.provider_template import LoaderProvider
-from adaptix._internal.morphing.request_cls import LoaderRequest
-from adaptix._internal.provider.located_request import for_predicate
-from adaptix._internal.provider.location import TypeHintLoc
-
-import pyrogram
-from pyrogram.enums.auto_name import AutoName
 from pyrogram.types.object import Object
-
-
-_needs_eval = (
-    pyrogram.raw.types.access_point_rule,
-    pyrogram.raw.types.account_days_ttl,
-    pyrogram.raw.types.attach_menu_bot,
-    pyrogram.raw.types.attach_menu_bot_icon,
-    pyrogram.raw.types.attach_menu_bot_icon_color,
-    pyrogram.raw.types.attach_menu_bots,
-    pyrogram.raw.types.attach_menu_bots_bot,
-    pyrogram.raw.types.attach_menu_bots_not_modified,
-    pyrogram.raw.types.attach_menu_peer_type_bot_pm,
-    pyrogram.raw.types.attach_menu_peer_type_chat,
-    pyrogram.raw.types.attach_menu_peer_type_pm,
-    pyrogram.raw.types.attach_menu_peer_type_same_bot_pm,
-    pyrogram.raw.types.auction_bid_level,
-    pyrogram.raw.types.authorization,
-    pyrogram.raw.types.auto_download_settings,
-    pyrogram.raw.types.auto_save_exception,
-    pyrogram.raw.types.auto_save_settings,
-    pyrogram.raw.types.available_effect,
-    pyrogram.raw.types.available_reaction,
-    pyrogram.raw.types.channel_full,
-    pyrogram.raw.types.chat_full,
-    pyrogram.raw.types.document,
-    pyrogram.raw.types.invoice,
-    pyrogram.raw.types.message_media_contact,
-    pyrogram.raw.types.message_media_dice,
-    pyrogram.raw.types.message_media_document,
-    pyrogram.raw.types.message_media_empty,
-    pyrogram.raw.types.message_media_game,
-    pyrogram.raw.types.message_media_geo,
-    pyrogram.raw.types.message_media_geo_live,
-    pyrogram.raw.types.message_media_giveaway,
-    pyrogram.raw.types.message_media_giveaway_results,
-    pyrogram.raw.types.message_media_invoice,
-    pyrogram.raw.types.message_media_paid_media,
-    pyrogram.raw.types.message_media_photo,
-    pyrogram.raw.types.message_media_poll,
-    pyrogram.raw.types.message_media_story,
-    pyrogram.raw.types.message_media_to_do,
-    pyrogram.raw.types.message_media_unsupported,
-    pyrogram.raw.types.message_media_venue,
-    pyrogram.raw.types.message_media_video_stream,
-    pyrogram.raw.types.message_media_web_page,
-    pyrogram.raw.types.story_item,
-    pyrogram.raw.types.user_full
-)
-for _module in _needs_eval:
-    exec_type_checking(_module)
-
-
-def load_enum_value(value: str) -> Enum:
-    from pyrogram import enums
-
-    type_name, name = value.split(".", maxsplit=1)
-    enum = getattr(enums, type_name)
-
-    return getattr(enum, name)
 
 
 def _get_pyrogram_types() -> dict[str, type]:
@@ -85,41 +13,76 @@ def _get_pyrogram_types() -> dict[str, type]:
     return pyrogram_classes
 
 
-@for_predicate(Object)
-class PyrogramObjectsProvider(LoaderProvider):
-    _pyrogram_types = _get_pyrogram_types()
+def _get_pyrogram_enums() -> dict[str, type]:
+    from enum import Enum
+    from pyrogram import enums
 
-    def provide_loader(self, mediator: Mediator[Loader], request: LoaderRequest) -> Loader:
+    objects = {name: getattr(enums, name) for name in dir(enums)}
+    classes = {name: cls for name, cls in objects.items() if isinstance(cls, type)}
+    enum_classes = {name: cls for name, cls in classes.items() if issubclass(cls, Enum)}
+    pyrogram_enums = {name: cls for name, cls in enum_classes.items() if cls.__module__.startswith('pyrogram.')}
 
-        def pyrogram_object_loader(data):
-            cls = self._pyrogram_types[data["_"]]
-            loader = mediator.mandatory_provide(request=LoaderRequest(request.loc_stack.replace_last(TypeHintLoc(cls))))
-            return loader(data)
-
-        return pyrogram_object_loader
+    return pyrogram_enums
 
 
-_pyrogram_objects = Retort(recipe=[
-    loader(OriginSubclassLSC(AutoName), load_enum_value),
-    bound(OriginSubclassLSC(Object), PyrogramObjectsProvider()),
-])
+def get_loader():
+    from datetime import datetime as dt
+
+    types = _get_pyrogram_types()
+    enums = _get_pyrogram_enums()
+
+    def load_enum_value(value):
+        if not isinstance(value, str):
+            raise ValueError(f"{value!r} is not a string")
+        enum_name, member_name = value.split('.', maxsplit=1)
+        enum = enums[enum_name]
+
+        return getattr(enum, member_name)
+
+    def load_list(lst_raw: list) -> list:
+        return [
+            loader(item) if isinstance(item, dict) else item
+            for item in lst_raw
+        ]
+
+    MISSABLE = {
+        'ChatPhoto': {'is_personal': None},
+        'Video': {'codec': None},
+        'WebPage': {'url': None},
+        'ExternalReplyInfo': {'message_id': None},
+        'SuccessfulPayment': {
+            'invoice_payload': None,
+            'telegram_payment_charge_id': None,
+            'provider_payment_charge_id': None,
+        },
+        'Sticker': {'is_animated': None, 'is_video': None},
+    }
+
+    def loader(json: dict, ty: type | None = None) -> Object:
+        type_name = json.pop("_")
+        if not isinstance(type_name, str):
+            raise ValueError(f"{type_name!r} is not a string")
+
+        type = types[type_name]
+        kwds: dict[str, Any] = MISSABLE.get(type_name, {}).copy()
+        for name, value in json.items():
+            if isinstance(value, dict):
+                value = loader(value)
+            elif isinstance(value, list):
+                value = load_list(value)
+            elif name in {'date', 'last_online_date'}:
+                value = dt.fromisoformat(value)
+            elif name in {'color', 'status', 'media', 'service'}:
+                value = load_enum_value(value)
+            elif name == 'type' and type_name != "WebPage":
+                value = load_enum_value(value)
+            elif name == 'media' and type_name != 'PaidMediaInfo':
+                value = load_enum_value(value)
+            kwds[name] = value
+
+        return type(**kwds)
+
+    return loader
 
 
-AnyObject = TypeVar("AnyObject", bound=Object, covariant=True)
-
-
-@overload
-def load_object(raw: dict, type: type[AnyObject]) -> AnyObject: ...
-@overload
-def load_object(raw: dict, type: None = None) -> Object: ...
-
-
-def load_object(raw: dict, type: type[AnyObject] | None = None) -> AnyObject | Object:
-    if type is not None:
-        return _pyrogram_objects.load(raw, type)
-    return _pyrogram_objects.load(raw, Object)
-
-
-def load_objects(iterable: Iterable[dict]) -> Iterator[Object]:
-    for item in iterable:
-        yield load_object(item)
+load_object = get_loader()
