@@ -4,6 +4,7 @@ from typing import TypeVar, overload
 
 from adaptix import Retort, bound, loader
 from adaptix import Mediator, Loader
+from adaptix.type_tools import exec_type_checking
 from adaptix._internal.provider.loc_stack_filtering import OriginSubclassLSC
 from adaptix._internal.morphing.provider_template import LoaderProvider
 from adaptix._internal.morphing.request_cls import LoaderRequest
@@ -12,7 +13,57 @@ from adaptix._internal.provider.location import TypeHintLoc
 
 import pyrogram
 from pyrogram.enums.auto_name import AutoName
-from pyrogram.types import Object
+from pyrogram.types.object import Object
+
+
+_needs_eval = (
+    pyrogram.raw.types.access_point_rule,
+    pyrogram.raw.types.account_days_ttl,
+    pyrogram.raw.types.attach_menu_bot,
+    pyrogram.raw.types.attach_menu_bot_icon,
+    pyrogram.raw.types.attach_menu_bot_icon_color,
+    pyrogram.raw.types.attach_menu_bots,
+    pyrogram.raw.types.attach_menu_bots_bot,
+    pyrogram.raw.types.attach_menu_bots_not_modified,
+    pyrogram.raw.types.attach_menu_peer_type_bot_pm,
+    pyrogram.raw.types.attach_menu_peer_type_chat,
+    pyrogram.raw.types.attach_menu_peer_type_pm,
+    pyrogram.raw.types.attach_menu_peer_type_same_bot_pm,
+    pyrogram.raw.types.auction_bid_level,
+    pyrogram.raw.types.authorization,
+    pyrogram.raw.types.auto_download_settings,
+    pyrogram.raw.types.auto_save_exception,
+    pyrogram.raw.types.auto_save_settings,
+    pyrogram.raw.types.available_effect,
+    pyrogram.raw.types.available_reaction,
+    pyrogram.raw.types.channel_full,
+    pyrogram.raw.types.chat_full,
+    pyrogram.raw.types.document,
+    pyrogram.raw.types.invoice,
+    pyrogram.raw.types.message_media_contact,
+    pyrogram.raw.types.message_media_dice,
+    pyrogram.raw.types.message_media_document,
+    pyrogram.raw.types.message_media_empty,
+    pyrogram.raw.types.message_media_game,
+    pyrogram.raw.types.message_media_geo,
+    pyrogram.raw.types.message_media_geo_live,
+    pyrogram.raw.types.message_media_giveaway,
+    pyrogram.raw.types.message_media_giveaway_results,
+    pyrogram.raw.types.message_media_invoice,
+    pyrogram.raw.types.message_media_paid_media,
+    pyrogram.raw.types.message_media_photo,
+    pyrogram.raw.types.message_media_poll,
+    pyrogram.raw.types.message_media_story,
+    pyrogram.raw.types.message_media_to_do,
+    pyrogram.raw.types.message_media_unsupported,
+    pyrogram.raw.types.message_media_venue,
+    pyrogram.raw.types.message_media_video_stream,
+    pyrogram.raw.types.message_media_web_page,
+    pyrogram.raw.types.story_item,
+    pyrogram.raw.types.user_full
+)
+for _module in _needs_eval:
+    exec_type_checking(_module)
 
 
 def load_enum_value(value: str) -> Enum:
