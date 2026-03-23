@@ -2139,6 +2139,7 @@ class FromPyrogram:
             raise ValueError("Message has no linking to chat/channel")
 
         if tg_message.sender_chat.type == ChatType.CHANNEL:
+            # FIXME: channel DM messages sender parsed as FromChannelAdmin
             return FromChannelAdmin(
                 channel=self.from_channel(tg_message.sender_chat),
                 author_signature=tg_message.author_signature,
