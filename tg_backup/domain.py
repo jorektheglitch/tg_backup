@@ -1189,8 +1189,8 @@ class ChannelPost:
     has_protected_content: bool
     date: dt
     payload: Message
-    views: int
-    forwards: int
+    views: int | None  # can be None on service messages
+    forwards: int | None  # can be None on service messages
 
 
 BoundMessage: TypeAlias = ChatMessage | ChannelPost

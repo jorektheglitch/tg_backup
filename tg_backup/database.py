@@ -399,8 +399,8 @@ class ChannelPost(BoundMessage):
     chat_id: Mapped[int] = mapped_column(ForeignKey(Channel.tg_id), primary_key=True, init=False)
     channel: Mapped[Channel] = relationship(Channel, uselist=False)
     msg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    views: Mapped[int] = mapped_column(Integer, nullable=False)
-    forwards: Mapped[int] = mapped_column(Integer, nullable=False)
+    views: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    forwards: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __domain_class__ = domain.ChannelPost
     __tablename__ = "posts_info"
