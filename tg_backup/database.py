@@ -2799,6 +2799,7 @@ class SQLARepo:
                 raise ValueError(f"Unknown message sender type: {unknown}", unknown)
 
         self._session.add(sender)
+        await self._session.flush([sender])
 
         return sender
 
@@ -3689,10 +3690,11 @@ class SQLARepo:
         return price
 
     async def get_or_create_user(self, user_info: domain.User) -> User:
-        user = await self._session.get(User, user_info.tg_id)
+        user = await self._session.get(User, user_info.tg_id, populate_existing=True)
         if user is None:
             user = User(tg_id=user_info.tg_id)
             self._session.add(user)
+            await self._session.flush([user])
         return user
 
     @overload
@@ -3743,6 +3745,7 @@ class SQLARepo:
                 raise ValueError(f"Can't store {unknowwn} as chat")
 
         self._session.add(chat)
+        await self._session.flush([chat])
         return chat
 
     async def get_or_create_custom_emoji(self, cusom_emoji_info: domain.CustomEmoji) -> CustomEmoji:
@@ -3750,6 +3753,7 @@ class SQLARepo:
         if custom_emoji is None:
             custom_emoji = CustomEmoji(tg_id=cusom_emoji_info.tg_id)
             self._session.add(custom_emoji)
+            await self._session.flush([custom_emoji])
         return custom_emoji
 
 
