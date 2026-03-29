@@ -2111,7 +2111,7 @@ class FromPyrogram:
                 channel=channel,
                 msg_no=tg_message.id,
                 sender=sender,
-                has_protected_content=tg_message.has_protected_content,  # type: ignore
+                has_protected_content=tg_message.has_protected_content or False,  # type: ignore
                 date=tg_message.date,  # type: ignore
                 payload=payload,
                 views=tg_message.views,  # type: ignore
@@ -2123,7 +2123,7 @@ class FromPyrogram:
                 chat=chat,
                 msg_no=tg_message.id,
                 sender=sender,
-                has_protected_content=tg_message.has_protected_content,  # type: ignore
+                has_protected_content=tg_message.has_protected_content or False,  # type: ignore
                 date=tg_message.date,  # type: ignore
                 payload=payload,
             )
