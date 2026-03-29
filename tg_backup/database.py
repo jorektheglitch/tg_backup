@@ -556,12 +556,7 @@ class Sticker(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "stickers_thumbs",
-            registry.metadata,
-            Column("sticker_id", ForeignKey(Sticker.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: stickers_thumbs,
         default_factory=list
     )
 
@@ -570,6 +565,14 @@ class Sticker(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Sticker,
     }
+
+
+stickers_thumbs: Table = Table(
+    "stickers_thumbs",
+    registry.metadata,
+    Column("sticker_id", ForeignKey(Sticker.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -585,12 +588,7 @@ class Audio(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "audios_thumbs",
-            registry.metadata,
-            Column("audio_id", ForeignKey(Audio.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: audios_thumbs,
         default_factory=list
     )
 
@@ -599,6 +597,14 @@ class Audio(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Audio,
     }
+
+
+audios_thumbs: Table = Table(
+    "audios_thumbs",
+    registry.metadata,
+    Column("audio_id", ForeignKey(Audio.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -611,12 +617,7 @@ class Document(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "documents_thumbs",
-            registry.metadata,
-            Column("document_id", ForeignKey(Document.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: documents_thumbs,
         default_factory=list
     )
 
@@ -625,6 +626,14 @@ class Document(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Document,
     }
+
+
+documents_thumbs: Table = Table(
+    "documents_thumbs",
+    registry.metadata,
+    Column("document_id", ForeignKey(Document.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -638,12 +647,7 @@ class Photo(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "photos_thumbs",
-            registry.metadata,
-            Column("photo_id", ForeignKey(Photo.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: photos_thumbs,
         default_factory=list
     )
 
@@ -652,6 +656,14 @@ class Photo(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Photo,
     }
+
+
+photos_thumbs: Table = Table(
+    "photos_thumbs",
+    registry.metadata,
+    Column("photo_id", ForeignKey(Photo.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -667,12 +679,7 @@ class Animation(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "animations_thumbs",
-            registry.metadata,
-            Column("animation_id", ForeignKey(Animation.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: animations_thumbs,
         default_factory=list
     )
 
@@ -681,6 +688,14 @@ class Animation(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Animation,
     }
+
+
+animations_thumbs: Table = Table(
+    "animations_thumbs",
+    registry.metadata,
+    Column("animation_id", ForeignKey(Animation.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -698,12 +713,7 @@ class Video(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "videos_thumbs",
-            registry.metadata,
-            Column("video_id", ForeignKey(Video.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
+        secondary=lambda: videos_thumbs,
         default_factory=list
     )
 
@@ -712,6 +722,14 @@ class Video(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.Video,
     }
+
+
+videos_thumbs: Table = Table(
+    "videos_thumbs",
+    registry.metadata,
+    Column("video_id", ForeignKey(Video.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
@@ -741,13 +759,8 @@ class VideoNote(FileMedia):
 
     thumbs: Mapped[list[Thumbnail]] = relationship(
         Thumbnail,
-        secondary=lambda: Table(
-            "videonotes_thumbs",
-            registry.metadata,
-            Column("document_id", ForeignKey(VideoNote.id), primary_key=True),
-            Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
-        ),
-        default_factory=list
+        secondary=lambda: videonotes_thumbs,
+        default_factory=list,
     )
 
     __domain_class__ = domain.VideoNote
@@ -755,6 +768,14 @@ class VideoNote(FileMedia):
     __mapper_args__ = {
         "polymorphic_identity": MediaType.VideoNote,
     }
+
+
+videonotes_thumbs: Table = Table(
+    "videonotes_thumbs",
+    registry.metadata,
+    Column("document_id", ForeignKey(VideoNote.id), primary_key=True),
+    Column("thumb_id", ForeignKey(Thumbnail.id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
