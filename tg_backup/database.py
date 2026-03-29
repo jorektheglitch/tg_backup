@@ -864,7 +864,7 @@ class Venue(_Media):
 @mapped_as_dataclass(registry)
 class WebPage(_Media):
     id: Mapped[int] = mapped_column(ForeignKey(_Media.id), primary_key=True, autoincrement=False, init=False)
-    tg_id: Mapped[str] = mapped_column(String, unique=True)
+    tg_id: Mapped[str] = mapped_column(String)  # TODO: enable unique when versioning will be done
 
     __domain_class__ = domain.WebPage
     __tablename__ = "webpages"
@@ -3208,9 +3208,31 @@ class SQLARepo:
                 )
             case domain.Poll() | domain.Quiz():
                 media = await self.store_poll_info(media_info, add_to_session=False)
-            case domain.WebPage():
-                media = WebPage(tg_id=media_info.tg_id)
-                # TODO: add details
+            case domain.WebPageEmpty():
+                media = WebPageEmpty(tg_id=media_info.tg_id)
+            case domain.WebPageDetails():
+                media = WebPageDetails(
+                    tg_id=media_info.tg_id,
+                    url=media_info.url,
+                    display_url=media_info.display_url,
+                    type=media_info.type,
+                    site_name=media_info.site_name,
+                    title=media_info.title,
+                    description=media_info.description,
+                    audio=await aoptional(self.store_media_info, media_info.audio),
+                    document=await aoptional(self.store_media_info, media_info.document),
+                    photo=await aoptional(self.store_media_info, media_info.photo),
+                    animation=await aoptional(self.store_media_info, media_info.animation),
+                    video=await aoptional(self.store_media_info, media_info.video),
+                    embed_url=media_info.embed_url,
+                    embed_type=media_info.embed_type,
+                    embed_width=media_info.embed_width,
+                    embed_height=media_info.embed_height,
+                    duration=media_info.duration,
+                    author=media_info.author,
+                )
+            case domain.WebPagePending():
+                media = WebPagePending(tg_id=media_info.tg_id)
             case domain.Dice():
                 media = Dice(emoji=media_info.emoji, value=media_info.value)
             case domain.Game():
