@@ -1471,9 +1471,18 @@ class UnsupportedServiceMessage(ServiceMessage):
 
 @mapped_as_dataclass(registry)
 class CustomAction(ServiceMessage):
+    chat_id: Mapped[int] = mapped_column(Integer, primary_key=True, init=False)
+    msg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, init=False)
     message: Mapped[str] = mapped_column(String, nullable=False)
 
     __domain_class__: ClassVar[type[Any]] = domain.CustomAction
+    __tablename__ = "custom_action_messages"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            (chat_id, msg_id),
+            (ServiceMessage.chat_id, ServiceMessage.msg_id),
+        ),
+    )
     __mapper_args__: ClassVar[dict[str, Any]] = {
         "polymorphic_identity": PayloadType.CustomAction,
     }
@@ -2552,7 +2561,7 @@ class SQLARepo:
                     has_media_spoiler=payload_info.has_media_spoiler,
                 )
             case domain.ServiceMessage():
-                payload = ServiceMessage()
+                payload = await self.store_service_message(payload_info)
             case unexpected:
                 raise ValueError(f"Can not store {unexpected} as message payload")
 
