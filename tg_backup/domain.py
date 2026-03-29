@@ -2082,6 +2082,7 @@ class FromPyrogram:
         if not tg_message.chat:
             raise TransformValueError("Message missing chat info", tg_message)
 
+        # NOTE: trying to understand how does replies work
         reply_to_message_id = tg_message.reply_to_message_id
         reply_to_top_message_id = tg_message.reply_to_top_message_id
         reply_to_external = tg_message.external_reply
