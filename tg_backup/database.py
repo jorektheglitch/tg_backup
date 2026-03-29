@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Literal, TypeAlias, TypeVar, overload
 
 from sqlalchemy.types import Boolean, LargeBinary, DateTime, Enum, Float, Integer, String
 from sqlalchemy.types import TypeDecorator
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, select
 from sqlalchemy import MetaData
 from sqlalchemy import orm
 from sqlalchemy.engine import Dialect
@@ -2662,27 +2662,38 @@ class SQLARepo:
         sender: MessageSource | None
         match sender_info:
             case domain.FromUser():
-                sender = await self._session.get(FromUser, sender_info.user.tg_id)
+                sender = await self._session.scalar(
+                    select(FromUser)
+                    .where(FromUser.user_id == sender_info.user.tg_id)
+                )
                 if sender is None:
                     user = await self.get_or_create_user(sender_info.user)
                     sender = FromUser(user=user)
             case domain.FromChannel():
-                sender = await self._session.get(FromChannel, sender_info.channel.tg_id)
-                if sender is None:
-                    channel = await self.get_or_create_channel(sender_info.channel)
-                    sender = FromChannel(channel=channel)
-            case domain.FromChannelAdmin():
-                sender = await self._session.get(
-                    FromChannelAdmin,
-                    (sender_info.channel.tg_id, sender_info.author_signature)
+                sender = await self._session.scalar(
+                    select(FromChannel)
+                    .where(FromChannel.channel_id == sender_info.channel.tg_id)
                 )
                 if sender is None:
-                    channel = await self.get_or_create_channel(sender_info.channel)
+                    channel = await self.get_or_create_chat(sender_info.channel)
+                    sender = FromChannel(channel=channel)
+            case domain.FromChannelAdmin():
+                sender = await self._session.scalar(
+                    select(FromChannelAdmin)
+                    .where(
+                        FromChannelAdmin.channel_id == sender_info.channel.tg_id,
+                        FromChannelAdmin.author_signature == sender_info.author_signature
+                    )
+                )
+                if sender is None:
+                    channel = await self.get_or_create_chat(sender_info.channel)
                     sender = FromChannelAdmin(channel=channel, author_signature=sender_info.author_signature)
             case domain.FromAnonAdmin():
-                sender = await self._session.get(
-                    FromAnonAdmin,
-                    (sender_info.chat.tg_id, sender_info.admin_mark)
+                sender = await self._session.scalar(
+                    select(FromAnonAdmin).where(
+                        FromAnonAdmin.chat_id == sender_info.chat.tg_id,
+                        FromAnonAdmin.admin_mark == sender_info.admin_mark,
+                    ),
                 )
                 if sender is None:
                     chat = await self.get_or_create_chat(sender_info.chat)
