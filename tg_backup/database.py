@@ -992,7 +992,7 @@ class Dice(_Media):
 @mapped_as_dataclass(registry)
 class SharedGame(_Media):
     id: Mapped[int] = mapped_column(ForeignKey(_Media.id), primary_key=True, autoincrement=False, init=False)
-    game_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    game_id: Mapped[int] = mapped_column(Integer, nullable=False)  # TODO: enable unique after versioning done?
 
     __domain_class__ = domain.Game
     __tablename__ = "games"
