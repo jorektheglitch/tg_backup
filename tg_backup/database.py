@@ -1296,6 +1296,7 @@ class PayloadType(enum.StrEnum):
 
     # service messages
     Unsupported = "Unsupported"
+    Borked = "Borked"
     CustomAction = "CustomAction"
     NewChatMembers = "NewChatMembers"
     LeftChatMember = "LeftChatMember"
@@ -1458,6 +1459,14 @@ class ServiceMessage(_ServiceMessage):
     __domain_class__: ClassVar[type[Any]] = domain.ServiceMessage
     __mapper_args__: ClassVar[dict[str, Any]] = {
         "polymorphic_abstract": True,
+    }
+
+
+@mapped_as_dataclass(registry)
+class ServiceMessageBorked(ServiceMessage):
+    __domain_class__: ClassVar[type[Any]] = domain.ServiceMessage
+    __mapper_args__: ClassVar[dict[str, Any]] = {
+        "polymorphic_identity": PayloadType.Borked,
     }
 
 
@@ -2905,6 +2914,8 @@ class SQLARepo:
                 message = UnsupportedServiceMessage()
             case domain.CustomAction():
                 message = CustomAction(message=message_info.message)
+            case domain.BorkedServiceMessage():
+                message = ServiceMessageBorked()
             case unknown:
                 raise ValueError(f"Can not store {unknown} as service message.")
 
