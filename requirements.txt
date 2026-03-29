@@ -2,3 +2,4 @@ Kurigram==2.2.19
 adaptix==3.0.0b8
 json-stream==2.3.2
 uvloop; sys_platform == 'linux'
+sqlalchemy==2.0.45
