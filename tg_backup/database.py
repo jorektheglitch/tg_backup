@@ -1111,12 +1111,7 @@ class GiveawayWinners(_Media):
     unclaimed_prize_count: Mapped[int]
     winners: Mapped[list[User]] = relationship(
         User,
-        secondary=lambda: Table(
-            "giveaway_winner_users",
-            registry.metadata,
-            Column("giweaway_winners_id", ForeignKey(GiveawayWinners.id), primary_key=True),
-            Column("user_id", ForeignKey(User.tg_id), primary_key=True),
-        )
+        secondary=lambda: giveaway_winners_users,
     )
     # giveaway_message: Optional["types.Message"] = None  # pyro trying to get message from id internally
     was_refunded: Mapped[bool] = mapped_column(Boolean, kw_only=True)
@@ -1126,6 +1121,14 @@ class GiveawayWinners(_Media):
     __mapper_args__ = {
         "polymorphic_abstract": True,
     }
+
+
+giveaway_winners_users: Table = Table(
+    "giveaway_winners_users",
+    registry.metadata,
+    Column("giweaway_winners_id", ForeignKey(GiveawayWinners.id), primary_key=True),
+    Column("user_id", ForeignKey(User.tg_id), primary_key=True),
+)
 
 
 @mapped_as_dataclass(registry)
