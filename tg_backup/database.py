@@ -270,6 +270,92 @@ class FromAnonAdmin(MessageSource):
     }
 
 
+class ForwardOriginType(enum.StrEnum):
+    USER = "USER"
+    HIDDEN_USER = "HIDDEN_USER"
+    CHANNEL = "CHANNEL"
+    LINKED_CHANNEL = "LINKED_CHANNEL"
+    ANON_ADMIN = "ANON_ADMIN"
+
+
+@mapped_as_dataclass(registry)
+class ForwardOrigin:
+    rowid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, init=False)
+    type: Mapped[ForwardOriginType] = mapped_column(Enum(ForwardOriginType), nullable=False, init=False)
+    # TODO: separate origin_date for origin reusabiility?
+    origin_date: Mapped[dt | None] = mapped_column(DateTime, nullable=True)
+
+    __tablename__ = "forward_from"
+    __mapper_args__ = {
+        "polymorphic_abstract": True,
+        "polymorphic_on": "type",
+    }
+
+
+@mapped_as_dataclass(registry)
+class AnonUserOrigin(ForwardOrigin):
+    rowid: Mapped[int] = mapped_column(ForeignKey(ForwardOrigin.rowid), primary_key=True, autoincrement=True, init=False)  # noqa: E501
+    sender_name: Mapped[str]
+
+    __tablename__ = "forward_from_hidden_user"
+    __mapper_args__ = {
+        "polymorphic_identity": ForwardOriginType.HIDDEN_USER,
+    }
+
+
+@mapped_as_dataclass(registry)
+class UserOrigin(ForwardOrigin):
+    rowid: Mapped[int] = mapped_column(ForeignKey(ForwardOrigin.rowid), primary_key=True, autoincrement=True, init=False)  # noqa: E501
+    user_id: Mapped[int] = mapped_column(ForeignKey(User.tg_id), init=False)
+    user: Mapped[User] = relationship(User, uselist=False)
+
+    __tablename__ = "forward_from_user"
+    __mapper_args__ = {
+        "polymorphic_identity": ForwardOriginType.USER,
+    }
+
+
+@mapped_as_dataclass(registry)
+class _ChannelOrigin(ForwardOrigin):
+    rowid: Mapped[int] = mapped_column(ForeignKey(ForwardOrigin.rowid), primary_key=True, autoincrement=True, init=False)  # noqa: E501
+    channel_id: Mapped[int] = mapped_column(ForeignKey(Channel.tg_id), init=False)
+    channel: Mapped[Channel] = relationship(Channel, foreign_keys=[channel_id])
+    source_message_id: Mapped[int]  # TODO: foreign key to BoundMessage?
+    author_signature: Mapped[str | None]
+
+    __tablename__ = "forward_from_channel"
+    __mapper_args__ = {
+        "polymorphic_abstract": True,
+    }
+
+
+@mapped_as_dataclass(registry)
+class LinkedChannelOrigin(_ChannelOrigin):
+    __mapper_args__ = {
+        "polymorphic_identity": ForwardOriginType.LINKED_CHANNEL,
+    }
+
+
+@mapped_as_dataclass(registry)
+class ChannelOrigin(_ChannelOrigin):
+    __mapper_args__ = {
+        "polymorphic_identity": ForwardOriginType.CHANNEL,
+    }
+
+
+@mapped_as_dataclass(registry)
+class AnonAdminOrigin(ForwardOrigin):
+    rowid: Mapped[int] = mapped_column(ForeignKey(ForwardOrigin.rowid), primary_key=True, autoincrement=True, init=False)  # noqa: E501
+    chat_id: Mapped[int] = mapped_column(ForeignKey(Chat.tg_id), init=False)
+    chat: Mapped[Chat] = relationship(Chat, foreign_keys=[chat_id], uselist=False)
+    admin_mark: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    __tablename__ = "forward_from_anon_admin"
+    __mapper_args__ = {
+        "polymorphic_identity": ForwardOriginType.ANON_ADMIN,
+    }
+
+
 class MessageType(enum.StrEnum):
     MESSAGE = "MESSAGE"
     POST = "POST"
@@ -285,6 +371,8 @@ class BoundMessage:
     payload: Mapped[Payload] = relationship(lambda: Payload, uselist=False)
     date: Mapped[dt] = mapped_column(DateTime(timezone=True), nullable=False)
     has_protected_content: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    forward_from_id: Mapped[int | None] = mapped_column(ForeignKey(ForwardOrigin.rowid), nullable=True, init=False)
+    forward_from: Mapped[ForwardOrigin | None] = relationship(ForwardOrigin, foreign_keys=[forward_from_id])
     # TODO: replies
     # reply_to: Mapped[BoundMessage] = relationship(lambda: BoundMessage)
 
@@ -1435,6 +1523,7 @@ class PayloadType(enum.StrEnum):
     Empty = "Empty"
     Text = "Text"
     Media = "Media"
+    Forwarded = "Forwarded"
 
     # service messages
     Unsupported = "Unsupported"
@@ -2628,7 +2717,13 @@ class SQLARepo:
 
     async def store_message(self, message_info: domain.BoundMessage) -> ChannelPost | ChatMessage:
         sender = await self.get_or_create_sender(message_info.sender)
-        payload = await self.store_message_payload(message_info.payload)
+        payload_info = message_info.payload
+        forward_from: ForwardOrigin | None = None
+        if isinstance(payload_info, domain.Forwarded):
+            forward_from = await self.store_forward_origin(payload_info)
+            payload_info = payload_info.message
+
+        payload = await self.store_message_payload(payload_info)
 
         message: ChannelPost | ChatMessage
         match message_info:
@@ -2639,6 +2734,7 @@ class SQLARepo:
                     msg_id=message_info.msg_no,
                     sender=sender,
                     has_protected_content=message_info.has_protected_content,
+                    forward_from=forward_from,
                     date=message_info.date,
                     payload=payload,
                     views=message_info.views,
@@ -2651,6 +2747,7 @@ class SQLARepo:
                     msg_id=message_info.msg_no,
                     sender=sender,
                     has_protected_content=message_info.has_protected_content,
+                    forward_from=forward_from,
                     date=message_info.date,
                     payload=payload,
                 )
@@ -2705,6 +2802,44 @@ class SQLARepo:
 
         return sender
 
+    async def store_forward_origin(self, forwarded_info: domain.Forwarded) -> ForwardOrigin:
+        origin: ForwardOrigin
+        match forwarded_info.origin:
+            case domain.UserOrigin():
+                origin = UserOrigin(
+                    origin_date=forwarded_info.origin_date,
+                    user=await self.get_or_create_user(forwarded_info.origin.user),
+                )
+            case domain.AnonUserOrigin():
+                origin = AnonUserOrigin(
+                    origin_date=forwarded_info.origin_date,
+                    sender_name=forwarded_info.origin.sender_name,
+                )
+            case domain.ChannelOrigin():
+                origin = ChannelOrigin(
+                    origin_date=forwarded_info.origin_date,
+                    channel=await self.get_or_create_chat(forwarded_info.origin.channel),
+                    source_message_id=forwarded_info.origin.source_message_id,
+                    author_signature=forwarded_info.origin.author_signature,
+                )
+            case domain.LinkedChannelOrigin():
+                origin = LinkedChannelOrigin(
+                    origin_date=forwarded_info.origin_date,
+                    channel=await self.get_or_create_chat(forwarded_info.origin.channel),
+                    source_message_id=forwarded_info.origin.source_message_id,
+                    author_signature=forwarded_info.origin.author_signature,
+                )
+            case domain.AnonAdminOrigin():
+                origin = AnonAdminOrigin(
+                    origin_date=forwarded_info.origin_date,
+                    chat=await self.get_or_create_chat(forwarded_info.origin.chat),
+                    admin_mark=forwarded_info.origin.admin_mark,
+                )
+            case _:
+                raise ValueError(f"Unknown forward origin: {forwarded_info}")
+
+        return origin
+
     async def store_message_payload(self, payload_info: domain.Message) -> Payload:
         payload: Payload
         match payload_info:
@@ -2712,8 +2847,9 @@ class SQLARepo:
                 text = await self.store_text(payload_info.text)
                 payload = TextMessage(text=text)
             case domain.Forwarded():
-                # TODO
-                raise ValueError()
+                raise ValueError(
+                    f"{domain.Forwarded.__qualname__} and its subclasses should be handled in {self.store_message}"
+                )
             case domain.MediaMessage():
                 caption = await self.store_text(payload_info.caption) if payload_info.caption else None
                 payload = MediaMessage(
