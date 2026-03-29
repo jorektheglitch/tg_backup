@@ -830,7 +830,7 @@ class GroupChat(Chat, ABC):
 @dataclass(frozen=True, repr=False)
 class UnavailableChat(GroupChat):
     # NOTE: basically same fields as in GroupChat
-    type: Literal[Unavailable.UNAVAILABLE] = field(kw_only=True, default=Unavailable.UNAVAILABLE)
+    type: Literal[ChatType.GROUP, ChatType.SUPERGROUP] = field(kw_only=True)
 
     def __repr__(self) -> str:
         return f"<ForbiddenChat '{self.title}'>"
@@ -2342,6 +2342,7 @@ class FromPyrogram:
             case ChatType.GROUP | ChatType.SUPERGROUP if tg_chat.is_banned:
                 chat = UnavailableChat(
                     tg_id=tg_chat.id,
+                    type=tg_chat.type,
                     title=not_none(tg_chat.title),
                     is_deactivated=tg_chat.is_deactivated or False,
                     is_call_active=tg_chat.is_call_active or False,
