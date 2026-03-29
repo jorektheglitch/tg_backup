@@ -39,27 +39,145 @@ NAMING = {
 registry = orm.registry(metadata=MetaData(naming_convention=NAMING))
 
 
+class ChatType(enum.StrEnum):
+    UserDialog = "UserDialog"
+    "Chat is a private chat with a user"
+
+    BotDialog = "BotDialog"
+    "Chat is a private chat with a bot"
+
+    Group = "Group"
+    "Chat is a basic group"
+
+    UnavailableGroup = "UnavailableGroup"
+    "Chat is a basic group (unavailable for some reason)"
+
+    Supergroup = "Supergroup"
+    "Chat is a supergroup"
+
+    UnavailableSupergroup = "UnavailableSupergroup"
+    "Chat is a supergroup (unavailable for some reason)"
+
+    Channel = "Channel"
+    "Chat is a channel"
+
+    Forum = "Forum"
+    "Chat is a forum"
+
+    Direct = "Direct"
+    "Chat is a direct with a channel"
+
+
 @mapped_as_dataclass(registry)
 class Chat:
     tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
-    type: Mapped[domain.ChatType | None] = mapped_column(Enum(domain.ChatType), nullable=True)
+    type: Mapped[ChatType | None] = mapped_column(Enum(ChatType), init=False)
 
     __domain_class__ = domain.Chat
     __tablename__ = "chats"
+    __mapper_args__ = {
+        "polymorphic_abstract": True,
+        "polymorphic_on": "type",
+        # "with_polymorphic": "*",  # TODO: investigate performance
+    }
 
 
 @mapped_as_dataclass(registry)
-class Channel:
-    tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+class Channel(Chat):
+    # tg_id: Mapped[int] = mapped_column(ForeignKey(Chat.tg_id), primary_key=True, nullable=False, autoincrement=False)
 
-    __tablename__ = "channels"
+    # __tablename__ = "channels"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.Channel,
+    }
 
 
 @mapped_as_dataclass(registry)
-class User:
-    tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+class Dialog(Chat):
+    __mapper_args__ = {
+        "polymorphic_abstract": True,
+        "polymorphic_on": "type",
+    }
 
-    __tablename__ = "users"
+
+@mapped_as_dataclass(registry)
+class User(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "users"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.UserDialog,
+    }
+
+
+@mapped_as_dataclass(registry)
+class Bot(User):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "bots"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.BotDialog,
+    }
+
+
+@mapped_as_dataclass(registry)
+class Group(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "groups"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.Group,
+    }
+
+
+@mapped_as_dataclass(registry)
+class UnavailableGroup(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "groups"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.UnavailableGroup,
+    }
+
+
+@mapped_as_dataclass(registry)
+class Supergroup(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "supergroups"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.Supergroup,
+    }
+
+
+@mapped_as_dataclass(registry)
+class UnavailableSupergroup(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "supergroups"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.UnavailableSupergroup,
+    }
+
+
+@mapped_as_dataclass(registry)
+class Forum(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "forums"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.Forum,
+    }
+
+
+@mapped_as_dataclass(registry)
+class Direct(Chat):
+    # tg_id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False, autoincrement=False)
+
+    # __tablename__ = "channels_dms"
+    __mapper_args__ = {
+        "polymorphic_identity": ChatType.Direct,
+    }
 
 
 @mapped_as_dataclass(registry)
@@ -2515,7 +2633,7 @@ class SQLARepo:
         message: ChannelPost | ChatMessage
         match message_info:
             case domain.ChannelPost():
-                channel = await self.get_or_create_channel(message_info.channel)
+                channel = await self.get_or_create_chat(message_info.channel)
                 message = ChannelPost(
                     channel=channel,
                     msg_id=message_info.msg_no,
@@ -3242,7 +3360,7 @@ class SQLARepo:
                 media = StarsGiveaway(
                     stars=media_info.stars,
                     channels=[
-                        await self.get_or_create_channel(channel_info)
+                        await self.get_or_create_chat(channel_info)
                         for channel_info in media_info.channels_to_subscribe or ()
                     ],
                     until_date=media_info.until_date,
@@ -3256,7 +3374,7 @@ class SQLARepo:
                     quantity=media_info.quantity,
                     months=media_info.months,
                     channels=[
-                        await self.get_or_create_channel(channel_info)
+                        await self.get_or_create_chat(channel_info)
                         for channel_info in media_info.channels_to_subscribe or ()
                     ],
                     until_date=media_info.until_date,
@@ -3430,19 +3548,54 @@ class SQLARepo:
             self._session.add(user)
         return user
 
-    async def get_or_create_channel(self, channel_info: domain.Channel) -> Channel:
-        channel = await self._session.get(Channel, channel_info.tg_id)
-        if channel is None:
-            channel = Channel(tg_id=channel_info.tg_id)
-            self._session.add(channel)
-        return channel
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.UserDialog) -> User: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.BotDialog) -> Bot: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.Group) -> Group: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.Supergroup) -> Supergroup: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.Channel) -> Channel: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.UnavailableChat) -> UnavailableGroup | UnavailableSupergroup: pass  # noqa: E501
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.DeletedUserDialog) -> User: pass
+    @overload
+    async def get_or_create_chat(self, chat_info: domain.Chat) -> Chat: pass
 
     async def get_or_create_chat(self, chat_info: domain.Chat) -> Chat:
-        chat = await self._session.get(Chat, chat_info.tg_id)
-        if chat is None:
-            chat_type = chat_info.type if chat_info.type is not domain.UNAVAILABLE else None
-            chat = Chat(tg_id=chat_info.tg_id, type=chat_type)
-            self._session.add(chat)
+        # any_chat = with_polymorphic(Chat, "*")
+        chat: Chat | None = await self._session.get(Chat, chat_info.tg_id)
+        if chat is not None:
+            return chat
+
+        match chat_info:
+            case domain.UserDialog():
+                chat = User(tg_id=chat_info.tg_id)
+            case domain.BotDialog():
+                chat = Bot(tg_id=chat_info.tg_id)
+            case domain.Group():
+                chat = Group(tg_id=chat_info.tg_id)
+            case domain.Supergroup():
+                chat = Supergroup(tg_id=chat_info.tg_id)
+            case domain.Channel():
+                chat = Channel(tg_id=chat_info.tg_id)
+            case domain.UnavailableChat() if chat_info.type == domain.ChatType.GROUP:
+                chat = UnavailableGroup(tg_id=chat_info.tg_id)
+            case domain.UnavailableChat() if chat_info.type == domain.ChatType.SUPERGROUP:
+                chat = UnavailableSupergroup(tg_id=chat_info.tg_id)
+            case domain.DeletedUserDialog():
+                chat = User(tg_id=chat_info.tg_id)
+            case domain.Chat() if chat_info.type == domain.ChatType.GROUP:
+                chat = Group(tg_id=chat_info.tg_id)
+            case domain.Chat() if chat_info.type == domain.ChatType.SUPERGROUP:
+                chat = Supergroup(tg_id=chat_info.tg_id)
+            case unknowwn:
+                raise ValueError(f"Can't store {unknowwn} as chat")
+
+        self._session.add(chat)
         return chat
 
     async def get_or_create_custom_emoji(self, cusom_emoji_info: domain.CustomEmoji) -> CustomEmoji:
