@@ -6,12 +6,7 @@ from pathlib import Path
 from pyrogram import Client
 
 from tg_backup.backup import log, backup
-
-
-APP_NAME = ""
-API_ID = 0
-API_HASH = ""
-PHONE = ""
+from tg_backup.config import APP_NAME, API_ID, API_HASH, PHONE
 
 
 def main():
