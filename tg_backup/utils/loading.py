@@ -78,6 +78,8 @@ def get_loader():
                 value = load_enum_value(value)
             elif name == 'media' and type_name != 'PaidMediaInfo':
                 value = load_enum_value(value)
+            elif name == 'waveform':
+                value = literal_eval(value)
             kwds[name] = value
 
         return type(**kwds)
