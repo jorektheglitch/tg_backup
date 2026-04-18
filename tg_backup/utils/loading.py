@@ -70,7 +70,8 @@ def get_loader():
                 value = loader(value)
             elif isinstance(value, list):
                 value = load_list(value)
-            elif name in {'date', 'last_online_date'}:
+            elif name in {'date', 'last_online_date', 'start_date', 'until_date', 'winners_selection_date',
+                          'subscription_expiration_date'}:
                 value = dt.fromisoformat(value)
             elif name in {'color', 'status', 'media', 'service'}:
                 value = load_enum_value(value)
