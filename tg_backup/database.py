@@ -1533,6 +1533,7 @@ class PayloadType(enum.StrEnum):
     Text = "Text"
     Media = "Media"
     Forwarded = "Forwarded"
+    Unrecognized = "Unrecognized"
 
     # service messages
     Unsupported = "Unsupported"
@@ -1628,6 +1629,14 @@ class EmptyMessage(Payload):
     __domain_class__ = domain.Message
     __mapper_args__ = {
         "polymorphic_identity": PayloadType.Empty,
+    }
+
+
+@mapped_as_dataclass(registry)
+class UnrecognizedMessage(Payload):
+    __domain_class__ = domain.Message
+    __mapper_args__ = {
+        "polymorphic_identity": PayloadType.Unrecognized,
     }
 
 
@@ -2870,6 +2879,8 @@ class SQLARepo:
                 )
             case domain.ServiceMessage():
                 payload = await self.store_service_message(payload_info)
+            case domain.Unrecognized():
+                payload = UnrecognizedMessage()
             case unexpected:
                 raise ValueError(f"Can not store {unexpected} as message payload")
 

@@ -1094,6 +1094,16 @@ class Message(ABC):
     __pyro_mark__: ClassVar[MessagePayloadType]
 
 
+@dataclass(frozen=True)
+class MessageEmpty(Message):
+    pass
+
+
+@dataclass(frozen=True)
+class Unrecognized(Message):
+    tl_object: bytes | None = None
+
+
 # Message sources:
 #  From user - from_user: User
 #  On behalf of a chat - sender_chat: Chat
@@ -2068,8 +2078,18 @@ class FromPyrogram:
             payload = self.from_media_message(tg_message)
         elif tg_message.text:
             payload = TextMessage(text=self.from_string(tg_message.text))
+        elif tg_message.empty:
+            payload = MessageEmpty()
         else:
-            raise TransformValueError("I can't :(", tg_message)
+            log.warning("Unrecognized message in chat %s, msg id %s",
+                        tg_message.chat.id, tg_message.id,  # type: ignore
+                        )
+            if tg_message.raw:
+                raw = tg_message.raw.write()
+                payload = Unrecognized(tl_object=raw)
+            else:
+                payload = Unrecognized()
+            # raise TransformValueError("I can't :(", tg_message)
 
         forward_source = self.get_forward_origin(tg_message)
         if forward_source is not None:
