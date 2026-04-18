@@ -1,6 +1,10 @@
-from typing import Any
+from ast import literal_eval
+from typing import Any, TypeVar, overload
 
 from pyrogram.types.object import Object
+
+
+AnyObject = TypeVar("AnyObject", bound=Object, covariant=True)
 
 
 def _get_pyrogram_types() -> dict[str, type]:
@@ -58,12 +62,20 @@ def get_loader():
         'Sticker': {'is_animated': None, 'is_video': None},
     }
 
+    @overload
+    def loader(json: dict, ty: type[AnyObject]) -> AnyObject: pass
+    @overload
+    def loader(json: dict, ty: None = None) -> Object: pass
+
     def loader(json: dict, ty: type | None = None) -> Object:
         type_name = json.pop("_")
         if not isinstance(type_name, str):
             raise ValueError(f"{type_name!r} is not a string")
 
         type = types[type_name]
+        if ty and not issubclass(type, ty):
+            raise ValueError(f"Marked as '{type_name}', tried to load as {ty.__qualname__}")
+
         kwds: dict[str, Any] = MISSABLE.get(type_name, {}).copy()
         for name, value in json.items():
             if isinstance(value, dict):
