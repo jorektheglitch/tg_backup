@@ -663,6 +663,7 @@ class UnknownEntity(TextEntity):
 
 
 class MediaType(enum.StrEnum):
+    Unsupported = "Unsupported"
     Disappeared = "Disappeared"
     Thumbnail = "Thumbnail"
     Sticker = "Sticker"
@@ -705,6 +706,13 @@ class _Media():
     __mapper_args__ = {
         "polymorphic_on": "_type",
         "polymorphic_abstract": True,
+    }
+
+
+@mapped_as_dataclass(registry)
+class UnsupportedMedia(_Media):
+    __mapper_args__ = {
+        "polymorphic_identity": MediaType.Unsupported,
     }
 
 
@@ -1515,6 +1523,7 @@ Media: TypeAlias = (
     | PaidMedia
     | Checklist
     | DisappearedMedia
+    | UnsupportedMedia
 )
 
 
@@ -3270,6 +3279,8 @@ class SQLARepo:
     async def store_media_info(self, media_info: domain.Checklist) -> Checklist: pass
     @overload
     async def store_media_info(self, media_info: domain.DisappearedMedia) -> DisappearedMedia: pass
+    @overload
+    async def store_media_info(self, media_info: domain.UnsupportedMedia) -> UnsupportedMedia: pass
 
     async def store_media_info(
         self,
@@ -3613,6 +3624,8 @@ class SQLARepo:
                 )
             case domain.DisappearedMedia():
                 media = DisappearedMedia()
+            case domain.UnsupportedMedia():
+                media = UnsupportedMedia()
             case unknown:
                 raise ValueError(f"{type(unknown).__qualname__} object is not recognised as media")
         return media

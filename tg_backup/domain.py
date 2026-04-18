@@ -58,6 +58,10 @@ class _Media(ABC):
     pass
 
 
+class UnsupportedMedia(_Media):
+    pass
+
+
 @dataclass(frozen=True)
 class DisappearedMedia(_Media):
     raw_json: OnDemand[JSON] | None = field(kw_only=True, default=None)
@@ -1884,12 +1888,11 @@ class UpgradedGiftPurchaseOfferRejected(ServiceMessage):
     __pyro_mark__ = MessageServiceType.UPGRADED_GIFT_PURCHASE_OFFER_REJECTED
 
 
-
 Media: TypeAlias = (
     Audio | Document | Photo | Sticker | Video | Animation | Voice | VideoNote
     | Contact | Location | LiveLocation | BusinessLocation | Venue | Poll | Quiz | WebPage | Dice | Game
     | StarsGiveaway | SubscriptionsGiveaway | StarsGiveawayWinners | SubscriptionsGiveawayWinners
-    | Story | Invoice | PaidMedia | Checklist | DisappearedMedia
+    | Story | Invoice | PaidMedia | Checklist | DisappearedMedia | UnsupportedMedia
 )
 
 
@@ -2533,7 +2536,7 @@ class FromPyrogram:
         if tg_message.caption is not None:
             caption = self.from_string_with_entities(tg_message.caption, tg_entities=tg_message.caption_entities)
 
-        tg_media: TGMedia | DisappearedMedia
+        tg_media: TGMedia | DisappearedMedia | UnsupportedMedia
         match tg_message.media:
             case MessageMediaType.AUDIO if tg_message.audio: tg_media = tg_message.audio
             case MessageMediaType.DOCUMENT if tg_message.document: tg_media = tg_message.document
@@ -2558,12 +2561,14 @@ class FromPyrogram:
             case MessageMediaType.INVOICE if tg_message.invoice: tg_media = tg_message.invoice
             case MessageMediaType.PAID_MEDIA if tg_message.paid_media: tg_media = tg_message.paid_media
             case MessageMediaType.CHECKLIST if tg_message.checklist: tg_media = tg_message.checklist
+            case MessageMediaType.UNSUPPORTED:
+                tg_media = UnsupportedMedia()
             case media_type:
                 raise TransformMissingRequiredField(f"Message missing value in field for {media_type}: {tg_message}",
                                                     tg_message)
 
         media: Media
-        if isinstance(tg_media, DisappearedMedia):
+        if isinstance(tg_media, (DisappearedMedia, UnsupportedMedia)):
             media = tg_media
         else:
             media = self.from_media(tg_media)
