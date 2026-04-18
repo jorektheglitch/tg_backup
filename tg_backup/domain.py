@@ -2123,7 +2123,7 @@ class FromPyrogram:
         if reply_to_external:
             None  # pyright: ignore[reportUnusedExpression] # noqa
             if not (reply_to_external.chat and reply_to_external.origin):
-               None  # pyright: ignore[reportUnusedExpression] # noqa
+                None  # pyright: ignore[reportUnusedExpression] # noqa
         if reply_to_external and reply_quote:
             None  # pyright: ignore[reportUnusedExpression] # noqa
         if reply_to_story_id or reply_to_story_user_id:
