@@ -1262,8 +1262,8 @@ class SemicolonSeparated(TypeDecorator[tuple[str, ...]]):
 @mapped_as_dataclass(registry)
 class Giveaway(_Media):
     id: Mapped[int] = mapped_column(ForeignKey(_Media.id), primary_key=True, autoincrement=False, init=False)
-    channels: Mapped[list[Channel]] = relationship(
-        Channel, secondary=lambda: GiveawayChannelRequirement.__table__,
+    channels: Mapped[list[Chat]] = relationship(
+        Chat, secondary=lambda: GiveawayChannelRequirement.__table__,
         default_factory=list, kw_only=True
     )
     until_date: Mapped[dt | None] = mapped_column(DateTime, nullable=True, default=None, kw_only=True)
@@ -1282,7 +1282,7 @@ class Giveaway(_Media):
 @mapped_as_dataclass(registry)
 class GiveawayChannelRequirement:
     giveaway_id: Mapped[int] = mapped_column(ForeignKey(Giveaway.id), primary_key=True)
-    required_channel_id: Mapped[int] = mapped_column(ForeignKey(Channel.tg_id), primary_key=True)
+    required_channel_id: Mapped[int] = mapped_column(ForeignKey(Chat.tg_id), primary_key=True)
 
     __table__: ClassVar[Table]
     __tablename__ = "giveaways_required_channels"

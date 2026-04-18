@@ -233,7 +233,9 @@ class GameDetailed(Game):
 
 @dataclass(frozen=True)
 class Giveaway(ABC):
-    channels_to_subscribe: Sequence[Channel] | None = field(default=None, kw_only=True)
+    # NOTE: may be a pyrogram bug
+    # NOTE: for some reason unavailable channel parsed as Supergroup, so there is set Chat type
+    channels_to_subscribe: Sequence[Chat] | None = field(default=None, kw_only=True)
     until_date: dt | None = field(default=None, kw_only=True)
     description: str | None = field(default=None, kw_only=True)
     only_new_subscribers: bool | None = field(default=None, kw_only=True)
@@ -3410,7 +3412,7 @@ class FromPyrogram:
                     media = StarsGiveaway(
                         stars=tg_giveaway.stars,
                         channels_to_subscribe=[
-                            self.from_channel(tg_chat) for tg_chat in tg_giveaway.chats
+                            self.from_chat(tg_chat) for tg_chat in tg_giveaway.chats
                         ] if tg_giveaway.chats else None,
                         until_date=tg_giveaway.until_date,
                         description=tg_giveaway.description,
@@ -3423,7 +3425,7 @@ class FromPyrogram:
                         quantity=tg_giveaway.quantity,
                         months=tg_giveaway.months,
                         channels_to_subscribe=[
-                            self.from_channel(tg_chat) for tg_chat in tg_giveaway.chats
+                            self.from_chat(tg_chat) for tg_chat in tg_giveaway.chats
                         ] if tg_giveaway.chats else None,
                         until_date=tg_giveaway.until_date,
                         description=tg_giveaway.description,
